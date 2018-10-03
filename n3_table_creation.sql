@@ -1,6 +1,13 @@
-DROP TABLE IF EXISTS Address, API, Bank_Account, Borrower, Branch_Address, Users, Business_Entity, Business_Entity_Attribute,
-Business_User_Role, Component, Country, Currency, Financing_History, Funder, Gov_Entity_Reference, Log_File, Permission, Role, 
-Role_Permission, system_config, User_Role, Financing;
+
+create 3 account
+
+1 create user nemo3db  application
+2 create user nemo3op  open account
+
+select * from currency 
+
+-- Drop Tables 
+DROP TABLE IF EXISTS Address, API, Bank_Account, Borrower, Branch_Address, Users, Business_Entity, Business_Entity_Attribute, Component_Permission, Country, Currency, Financing_History, Funder, Gov_Entity_Reference, Log_File, Roles, Role_Component_Permission, system_config, User_Role, Financing;
  
 
 -- Create Tables
@@ -14,27 +21,19 @@ Company_Email  VARCHAR(200),
 Contact_Number VARCHAR(15), 
 Active    BOOLEAN,
 Deleted   BOOLEAN,
-Preffered_Language VARCHAR(35),
+Preferred_Language VARCHAR(35),
 Profile_Pic TEXT,
 IsLock BOOLEAN,	
-CONSTRAINT Users_ID_PK PRIMARY KEY (User_ID),
+CONSTRAINT Users_ID_PK PRIMARY KEY (User_ID, Business_Entity_ID),
 CONSTRAINT Users_User_ID_key UNIQUE (User_ID));	
-	 	 	  
-CREATE TABLE IF NOT EXISTS Business_User_Role (
-Business_User_Role_ID SERIAL NOT NULL,
-User_ID	INTEGER NOT NULL,
-Business_Entity_ID INTEGER NOT NULL,
-Business_User_Name	VARCHAR(200),
-Component_Names	VARCHAR(200),	
-CONSTRAINT Business_User_Role_ID_PK PRIMARY KEY(Business_User_Role_ID),
-CONSTRAINT Business_User_Role_Key UNIQUE(Business_User_Role_ID));
-
-
+	 
+ 		 
+										 
 CREATE TABLE IF NOT EXISTS User_Role (
 User_Role_ID  SERIAL NOT NULL,
-Business_Entity_ID INTEGER NOT NULL,
+User_ID INTEGER NOT NULL,
 Role_ID INTEGER NOT NULL,	
-CONSTRAINT User_Role_ID_PK PRIMARY KEY (User_Role_ID), 
+CONSTRAINT User_Role_ID_PK PRIMARY KEY (User_Role_ID, User_ID,Role_ID ), 
 CONSTRAINT User_Role_Key UNIQUE(User_Role_ID)); 
  
 
@@ -49,7 +48,7 @@ Country_ID INTEGER,
 Branch	 BOOLEAN,
 Deleted	 BOOLEAN,	
 Bill_Address_ID INTEGER,
-Branch_Address_ID INTEGER,	
+Branch_Address_ID INTEGER NOT NULL,	
 Bank_Account_ID	INTEGER,	
 Business_Logo TEXT,
 Borrower BOOLEAN,
@@ -176,7 +175,7 @@ CONSTRAINT FINANCING_HISTORY_PK UNIQUE(Financing_History_ID));
  
 CREATE TABLE IF NOT EXISTS System_Config
 (
-System_config_ID  SERIAL PRIMARY KEY,
+System_config_ID  SERIAL PRIMARY KEY NOT NULL,
 System_key				VARCHAR(100),
 System_value				VARCHAR(200),
 category				VARCHAR(20),
@@ -208,12 +207,29 @@ CONSTRAINT Bank_Account_ID_Key	PRIMARY KEY(Bank_Account_ID),
 CONSTRAINT Bank_Account_PK UNIQUE(Business_Entity_ID)		
 );
 
+									 
+CREATE TYPE Log_method AS ENUM (
+  'Onboarding Customer', 
+  'Invoice Management',
+  'Onboarding Funder',
+  'KYC',
+  'Financing AR Factoring',
+  'Financing AP',
+  'Dashboard NWC Management Tool',
+  'Add Create Bank Account',
+  'Repayment Customer',
+  'Repayment Funder',
+  'Nufin Internal Management System',
+  'Financing EPO',
+  'Financing EPR',
+  'Marketplace');	
 
- 
+	 							   
+									   
 CREATE TABLE IF NOT EXISTS  Log_File(  
 Log_ID	SERIAL NOT NULL,
 User_ID	VARCHAR(35),
-category VARCHAR(20),
+category Log_method,
 Log_Input TEXT,	
 Log_output TEXT, 
 Log_Result BOOLEAN,	
@@ -253,51 +269,46 @@ CONSTRAINT Country_PK UNIQUE(Country_ID)
 );
 
 
+									   
+									   
+									   
+									   
 CREATE TYPE category_method AS ENUM (
   'API', 
   'Menu');
   
-CREATE TABLE IF NOT EXISTS Component (	
-   Component_ID SERIAL NOT NULL,
+CREATE TABLE IF NOT EXISTS Component_Permission (	
+   Component_Permission_ID SERIAL NOT NULL,
    Reference_ID INTEGER NOT NULL,
    Category category_method,
-   Permission_ID INTEGER NOT NULL,
-CONSTRAINT Component_ID_Key PRIMARY KEY (Component_ID),
-CONSTRAINT Component_PK UNIQUE(Component_ID)
+   Role_Component_Permission_Id INTEGER NOT NULL,
+CONSTRAINT Component_ID_Key PRIMARY KEY (Component_Permission_ID),
+CONSTRAINT Component_PK UNIQUE(Component_Permission_ID)
 ); 
  
- 									   
-CREATE TYPE permission_method AS ENUM (
-  'Create', 
-  'Update',
-  'Read',
-  'Delete');
-  
-  
-CREATE TABLE IF NOT EXISTS Permission (
-   Permission_ID SERIAL NOT NULL,
-   Permission_name permission_method,
-   Permission_Description VARCHAR(200),
-CONSTRAINT Permission_ID_Key PRIMARY KEY(Permission_ID),
-CONSTRAINT Permission_PK Unique(Permission_ID)	
-); 
-   
  
  
-CREATE TABLE IF NOT EXISTS Role (
+CREATE TABLE IF NOT EXISTS Roles (
 Role_ID	 SERIAL NOT NULL,
 Role_Name	VARCHAR(200),
 CONSTRAINT Role_ID_Key PRIMARY KEY(Role_ID),
 CONSTRAINT Role_PK Unique(Role_ID)	
 );  
   
- 
-CREATE TABLE IF NOT EXISTS Role_Permission ( 
-Role_Permission_Id	SERIAL NOT NULL,
-Role_ID				SERIAL NOT NULL,
-Permission_ID		SERIAL NOT NULL,
-CONSTRAINT Role_Permission_ID_Key PRIMARY KEY(Role_Permission_Id),
-CONSTRAINT Role_Permission_PK Unique(Role_Permission_Id));
+CREATE TYPE Permissions_method AS ENUM (
+  'Create', 
+  'Read',
+  'Update',
+  'Delete');
+   									   
+ 									   
+CREATE TABLE IF NOT EXISTS Role_Component_Permission (	
+   Role_Component_Permission_ID SERIAL NOT NULL,
+   Role_ID INTEGER NOT NULL,
+   Category Permissions_method, 
+CONSTRAINT Role_Component_Permission_Key PRIMARY KEY (Role_Component_Permission_ID),
+CONSTRAINT Role_Component_Permission_PK UNIQUE(Role_Component_Permission_ID)
+); 
 
 
 CREATE TABLE IF NOT EXISTS Currency (  								 
@@ -339,7 +350,7 @@ CREATE TYPE Invoice_method AS ENUM (
   'Reject',
   'Paid');									 
 
-drop table invoice							  
+ 						  
 							  
 CREATE TABLE IF NOT EXISTS Invoice(
 Invoice_ID SERIAL NOT NULL,
@@ -389,7 +400,12 @@ CONSTRAINT Goods_Origination_PK Unique(Goods_ID)
 );
 									 
 									 
-									 
+CREATE TABLE nemo_user(
+nemo_user_ID	SERIAL NOT NULL,
+Business_user_role_ID INTEGER NOT NULL,
+CONSTRAINT nemo_user_ID_Key PRIMARY KEY(nemo_user_ID),	
+CONSTRAINT nemo_user_PK Unique(nemo_user_ID)		
+);	
 									 
 									 
 -- Add foreign key to the tables
@@ -400,24 +416,22 @@ CONSTRAINT Goods_Origination_PK Unique(Goods_ID)
 
 ALTER TABLE Users
 ADD CONSTRAINT Business_Entity_ID_fkey FOREIGN KEY (Business_Entity_ID) REFERENCES business_entity (business_entity_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-
- 
-ALTER TABLE Business_User_Role
-ADD CONSTRAINT 	Business_Entity_ID_fkey FOREIGN KEY (Business_Entity_ID) REFERENCES business_entity (business_entity_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-								 
-
-ALTER TABLE Business_User_Role
-ADD CONSTRAINT User_ID_fkey FOREIGN KEY(User_ID) REFERENCES Users (User_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-
-
-ALTER TABLE User_Role
-ADD CONSTRAINT Business_Entity_ID_fkey FOREIGN KEY (Business_Entity_ID) REFERENCES business_entity (business_entity_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-									 
+ 								 	
 ALTER TABLE User_Role									 
-ADD CONSTRAINT Role_ID_fkey FOREIGN KEY (Role_ID) REFERENCES Role (Role_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;										 
+ADD CONSTRAINT User_ID_fkey FOREIGN KEY (User_ID) REFERENCES Users(User_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+							  
+ALTER TABLE User_Role									 
+ADD CONSTRAINT Role_ID_fkey FOREIGN KEY (Role_ID) REFERENCES Roles (Role_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;										 
   
+			  
+							  
 ALTER TABLE Business_Entity
-ADD CONSTRAINT Address_ID_fkey FOREIGN KEY (Address_ID) REFERENCES Address (Address_ID)	MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;								 
+ADD CONSTRAINT Address_ID_fkey FOREIGN KEY (Address_ID) REFERENCES Address (Address_ID)	MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;	
+							  
+ALTER TABLE Business_Entity
+ADD CONSTRAINT Branch_Address_ID_fkey FOREIGN KEY (Branch_Address_ID) REFERENCES Branch_Address(Branch_Address_ID)	MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;								 
+							  
+							  
 			 					 
 ALTER TABLE Business_Entity_Attribute									 
 ADD CONSTRAINT Business_Entity_ID_fkey FOREIGN KEY (Business_Entity_ID) REFERENCES business_entity (business_entity_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
@@ -456,24 +470,28 @@ ADD CONSTRAINT Currency_ID_Fkey FOREIGN KEY(Currency_ID) REFERENCES currency (Cu
 ALTER TABLE Bank_Account
 ADD CONSTRAINT Address_ID_Fkey FOREIGN KEY(Address_ID) REFERENCES Address (Address_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 
-ALTER TABLE Api
-ADD CONSTRAINT API_ID_Fkey FOREIGN KEY(API_ID) REFERENCES API (API_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 							  
+ 							  
 ALTER TABLE Menu
 ADD CONSTRAINT Menu_ID_Fkey FOREIGN KEY(Menu_ID) REFERENCES Menu (Menu_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 
+ALTER TABLE Menu
+ADD CONSTRAINT Menu_ID_Fkey2 FOREIGN KEY(Menu_ID) REFERENCES Component_permission(Component_permission_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 							  
-ALTER TABLE Component
-ADD CONSTRAINT Reference_ID_Fkey FOREIGN KEY(Reference_ID) REFERENCES API (API_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
+ 
+ALTER TABLE API
+ADD CONSTRAINT API_ID_Fkey FOREIGN KEY(API_ID) REFERENCES Component_permission(Component_permission_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 
-ALTER TABLE Component
-ADD CONSTRAINT Permission_ID_Fkey FOREIGN KEY(Permission_ID) REFERENCES Permission (Permission_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
-  
-ALTER TABLE Role_Permission									 
-ADD CONSTRAINT Permission_ID_Fkey FOREIGN KEY(Permission_ID) REFERENCES Permission (Permission_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
-
-ALTER TABLE Role_Permission									 
-ADD CONSTRAINT Role_ID_Fkey FOREIGN KEY(Role_ID) REFERENCES Role (Role_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
+							  
+ALTER TABLE Component_Permission
+ADD CONSTRAINT Role_Component_Permission_ID_Fkey FOREIGN KEY(Role_Component_Permission_ID) REFERENCES Role_Component_Permission (Role_Component_Permission_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;								  
+							  
+	  						  							  							  
+ALTER TABLE Role_Component_Permission									 
+ADD CONSTRAINT Role_ID_Fkey FOREIGN KEY(Role_ID) REFERENCES Roles (Role_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;		
+							  
+							  
+								  
 							  
 ALTER TABLE Invoice
 ADD CONSTRAINT Currency_Id_Fkey FOREIGN KEY(Currency_Id) REFERENCES Currency (Currency_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
@@ -482,10 +500,10 @@ ALTER TABLE Invoice
 ADD CONSTRAINT Address_Id_Fkey FOREIGN KEY(Address_Id) REFERENCES Address (Address_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
 
 ALTER TABLE Invoice
-ADD CONSTRAINT Buyer_Business_Entity_Id_Fkey FOREIGN KEY(Buyer_Business_Entity_Id) REFERENCES Business_Entity(Business_Entity_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
+ADD CONSTRAINT Buyer_Business_Entity_Id_Fkey FOREIGN KEY(Buyer_Business_Entity_Id) REFERENCES Borrower(Borrower_Business_Entity_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
 							  
 ALTER TABLE Invoice
-ADD CONSTRAINT Supplier_Business_Entity_Id_Fkey FOREIGN KEY(Supplier_Business_Entity_Id) REFERENCES Business_Entity(Business_Entity_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
+ADD CONSTRAINT Supplier_Business_Entity_Id_Fkey FOREIGN KEY(Supplier_Business_Entity_Id) REFERENCES Borrower(Borrower_Business_Entity_Id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;							  
 
   
 ALTER TABLE Invoice_line_item
@@ -494,3 +512,5 @@ ADD CONSTRAINT Invoice_ID_fkey FOREIGN KEY(Invoice_ID) REFERENCES Invoice(Invoic
 
 ALTER TABLE Goods_Origination
 ADD CONSTRAINT Invoice_ID_fkey FOREIGN KEY(Invoice_ID) REFERENCES Invoice(Invoice_ID) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+							  
+							  
